@@ -359,14 +359,14 @@ module Resque
 
     # Registers the various signal handlers a worker responds to.
     #
-    # TERM: Shutdown immediately, stop processing jobs.
+    # TERM: Shutdown after the current job has finished processing.
     #  INT: Shutdown immediately, stop processing jobs.
     # QUIT: Shutdown after the current job has finished processing.
     # USR1: Kill the forked child immediately, continue processing jobs.
     # USR2: Don't process any new jobs
     # CONT: Start processing jobs again after a USR2
     def register_signal_handlers
-      trap('TERM') { shutdown!  }
+      trap('TERM') { shutdown  }
       trap('INT')  { shutdown!  }
 
       begin
