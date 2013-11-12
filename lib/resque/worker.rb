@@ -299,39 +299,39 @@ module Resque
     # CONT: Start processing jobs again after a USR2
     def register_signal_handlers
       trap('TERM') do 
-        warn 'Received WARN signal'
+        log 'Received TERM signal'
         shutdown
       end
 
       trap('INT') do 
-        warn 'Received INT signal'
+        log 'Received INT signal'
         shutdown!
       end
 
       begin
         trap('QUIT') do 
-          warn 'Received QUIT signal'
+          log 'Received QUIT signal'
           shutdown
         end
 
         if term_child
           trap('USR1') do
-            warn 'Received USR1 signal, using new_kill_child'
+            log 'Received USR1 signal, using new_kill_child'
             new_kill_child
           end
         else
           trap('USR1') do
-            warn 'Received USR1 signal, using old kill_child'
+            log 'Received USR1 signal, using old kill_child'
             kill_child
           end  
         end
         trap('USR2') do
-          warn 'Received USR2 signal, pausing processing'
+          log 'Received USR2 signal, pausing processing'
           pause_processing
         end
 
         trap('CONT') do
-          warn 'Received CONT signal, unpausing processing'
+          log 'Received CONT signal, unpausing processing'
           unpause_processing
         end
       rescue ArgumentError
@@ -477,6 +477,7 @@ module Resque
         # Ensure the proper worker is attached to this job, even if
         # it's not the precise instance that died.
         job.worker = self
+        log "Failing job"
         job.fail(exception || DirtyExit.new)
       end
 
