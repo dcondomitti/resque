@@ -195,6 +195,7 @@ module Resque
             if will_fork?
               run_at_exit_hooks ? exit : exit!
             end
+            info "Completed #{job.inspect}"
           end
 
           done_working
@@ -206,7 +207,7 @@ module Resque
           sleep interval
         end
       end
-
+      warn "Unregistering worker for #{@queues.join(',')}"
       unregister_worker
     rescue Exception => exception
       unless exception.class == SystemExit && !@child && run_at_exit_hooks
