@@ -151,7 +151,7 @@ module Resque
             procline "Processing #{job.queue} since #{Time.now.to_i}"
             reconnect
             perform(job, &block)
-            info "Completed #{job.inspect}"
+            log "Completed #{job.inspect}"
             exit! if will_fork?
           end
 
