@@ -195,6 +195,7 @@ module Resque
             if will_fork?
               run_at_exit_hooks ? exit : exit!
             end
+            log "Completed #{job.inspect}"
           end
 
           done_working
@@ -206,7 +207,7 @@ module Resque
           sleep interval
         end
       end
-
+      warn "Unregistering worker for #{@queues.join(',')}"
       unregister_worker
     rescue Exception => exception
       unless exception.class == SystemExit && !@child && run_at_exit_hooks
@@ -359,25 +360,49 @@ module Resque
 
     # Registers the various signal handlers a worker responds to.
     #
-    # TERM: Shutdown immediately, stop processing jobs.
+    # TERM: Shutdown after the current job has finished processing.
     #  INT: Shutdown immediately, stop processing jobs.
     # QUIT: Shutdown after the current job has finished processing.
     # USR1: Kill the forked child immediately, continue processing jobs.
     # USR2: Don't process any new jobs
     # CONT: Start processing jobs again after a USR2
     def register_signal_handlers
-      trap('TERM') { shutdown!  }
-      trap('INT')  { shutdown!  }
+      trap('TERM') do 
+        log 'Received TERM signal'
+        shutdown
+      end
+
+      trap('INT') do 
+        log 'Received INT signal'
+        shutdown!
+      end
 
       begin
-        trap('QUIT') { shutdown   }
-        if term_child
-          trap('USR1') { new_kill_child }
-        else
-          trap('USR1') { kill_child }
+        trap('QUIT') do 
+          log 'Received QUIT signal'
+          shutdown
         end
-        trap('USR2') { pause_processing }
-        trap('CONT') { unpause_processing }
+
+        if term_child
+          trap('USR1') do
+            log 'Received USR1 signal, using new_kill_child'
+            new_kill_child
+          end
+        else
+          trap('USR1') do
+            log 'Received USR1 signal, using old kill_child'
+            kill_child
+          end  
+        end
+        trap('USR2') do
+          log 'Received USR2 signal, pausing processing'
+          pause_processing
+        end
+
+        trap('CONT') do
+          log 'Received CONT signal, unpausing processing'
+          unpause_processing
+        end
       rescue ArgumentError
         warn "Signals QUIT, USR1, USR2, and/or CONT not supported."
       end
@@ -539,6 +564,7 @@ module Resque
         # Ensure the proper worker is attached to this job, even if
         # it's not the precise instance that died.
         job.worker = self
+        log "Failing job"
         job.fail(exception || DirtyExit.new)
       end
 
