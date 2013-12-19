@@ -187,14 +187,15 @@ module Resque
       queue = "queue:#{queue}"
       destroyed = 0
 
-      if args.empty?
-        redis.lrange(queue, 0, -1).each do |string|
-          if decode(string)['class'] == klass
+      redis.lrange(queue, 0, -1).each do |string|
+        decoded_string = decode(string)
+        if decoded_string['class'] == klass
+          if args.empty?
             destroyed += redis.lrem(queue, 0, string).to_i
+          else
+            destroyed += redis.lrem(queue, 0, encode(:class => klass, :args => args, :created_at => decoded_string['created_at'])) unless args.empty?
           end
         end
-      else
-        destroyed += redis.lrem(queue, 0, encode(:class => klass, :args => args))
       end
 
       destroyed
