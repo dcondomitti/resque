@@ -55,6 +55,20 @@ context "Resque" do
     assert_equal job, Resque.reserve(:jobs)
   end
 
+  test "can see when a job was placed in the queue" do
+    Resque::Job.create(:jobs, 'some-job', 20, '/tmp')
+
+    job = Resque.reserve(:jobs)
+    assert job.created_at
+  end
+
+  test "can see how long a job has been in the queue" do
+    Resque::Job.create(:jobs, 'some-job', 20, '/tmp')
+
+    job = Resque.reserve(:jobs)
+    assert job.age
+  end
+
   test "can put jobs on a queue by way of an ivar" do
     assert_equal 0, Resque.size(:ivar)
     assert Resque.enqueue(SomeIvarJob, 20, '/tmp')

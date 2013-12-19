@@ -314,6 +314,10 @@ module Resque
       "(Job{%s} | %s | %s)" % [ @queue, obj['class'], obj['args'].inspect ]
     end
 
+    def age
+      Time.now.utc - Time.parse(created_at)
+    end
+
     # Equality
     def ==(other)
       queue == other.queue &&
