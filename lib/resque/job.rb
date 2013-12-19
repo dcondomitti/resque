@@ -131,8 +131,12 @@ module Resque
     # This job's associated payload object.
     attr_reader :payload
 
+    # When the job was initially pushed onto the queue
+    attr_reader :created_at
+
     def initialize(queue, payload)
       @queue = queue
+      @created_at = payload.delete('created_at')
       @payload = payload
       @failure_hooks_ran = false
     end
@@ -148,9 +152,9 @@ module Resque
       if Resque.inline?
         # Instantiating a Resque::Job and calling perform on it so callbacks run
         # decode(encode(args)) to ensure that args are normalized in the same manner as a non-inline job
-        new(:inline, {'class' => klass, 'args' => decode(encode(args))}).perform
+        new(:inline, {'class' => klass, 'args' => decode(encode(args)), 'created_at' => Time.now.utc.iso8601}).perform
       else
-        Resque.push(queue, :class => klass.to_s, :args => args)
+        Resque.push(queue, :class => klass.to_s, :args => args, :created_at => Time.now.utc.iso8601)
       end
     end
 
