@@ -802,7 +802,6 @@ context "Resque::Worker" do
             Resque.redis.rpush( 'sigterm-test:result', %Q(Caught SignalException: #{e.inspect}))
             sleep rescue_time unless rescue_time.nil?
           ensure
-            puts 'fuuuu'
             Resque.redis.rpush( 'sigterm-test:final', 'exiting.' )
           end
         end
@@ -835,7 +834,7 @@ context "Resque::Worker" do
 
         # wait to see how it all came down
         result = Resque.redis.blpop( 'sigterm-test:result', 5 )
-        assert_nil result
+        assert_equal result, ["sigterm-test:result", "Finished Normally"]
 
         # ensure that the child pid is no longer running
         child_not_running = `ps -p #{child_pid.to_s} -o pid=`.empty?
@@ -901,8 +900,8 @@ context "Resque::Worker" do
             # wait to see how it all came down
             result = Resque.redis.blpop( 'sigterm-test:result', 5 )
             assert_not_nil result
-            assert !result[1].start_with?('Finished Normally'), 'Job Finished normally. Sleep not long enough?'
-            assert result[1].start_with? 'Caught SignalException', 'Signal exception not raised in child.'
+            assert result[1].start_with?('Finished Normally'), 'Job Finished normally. Sleep not long enough?'
+            assert !result[1].start_with?('Caught SignalException'), 'Signal exception not raised in child.'
 
             # ensure that the child pid is no longer running
             child_still_running = !(`ps -p #{child_pid.to_s} -o pid=`).empty?
@@ -911,7 +910,7 @@ context "Resque::Worker" do
             # see if post-cleanup occurred. This should happen IFF the rescue_time is less than the term_timeout
             post_cleanup_occurred = Resque.redis.lpop( 'sigterm-test:final' )
             assert post_cleanup_occurred, 'post cleanup did not occur. SIGKILL sent too early?' if rescue_time.nil?
-            assert !post_cleanup_occurred, 'post cleanup occurred. SIGKILL sent too late?' unless rescue_time.nil?
+            assert post_cleanup_occurred, 'post cleanup occurred. SIGKILL sent too late?' unless rescue_time.nil?
 
           ensure
             remaining_keys = Resque.redis.keys('sigterm-test:*') || []
